@@ -32,11 +32,10 @@ export interface SkillDefinition {
 }
 
 export const FRONTMATTER_REGEX =
-  /^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n([\s\S]*))?/;
+  /^---[ \t]*\r?\n([\s\S]*?)\r?\n---[ \t]*(?:\r?\n([\s\S]*))?/;
 
 /**
  * Parses frontmatter content using YAML with a fallback to simple key-value parsing.
- * This handles cases where description contains colons that would break YAML parsing.
  */
 export function parseFrontmatter(
   content: string,
@@ -61,6 +60,20 @@ export function parseFrontmatter(
 }
 
 /**
+ * Helper to remove surrounding quotes from a string.
+ */
+function unquote(value: string): string {
+  const trimmed = value.trim();
+  if (
+    (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
+    (trimmed.startsWith("'") && trimmed.endsWith("'"))
+  ) {
+    return trimmed.slice(1, -1);
+  }
+  return trimmed;
+}
+
+/**
  * Simple frontmatter parser that extracts name and description fields.
  * Handles cases where values contain colons that would break YAML parsing.
  */
@@ -77,7 +90,7 @@ function parseSimpleFrontmatter(
     // Match "name:" at the start of the line (optional whitespace)
     const nameMatch = line.match(/^\s*name:\s*(.*)$/);
     if (nameMatch) {
-      name = nameMatch[1].trim();
+      name = unquote(nameMatch[1]);
       continue;
     }
 
@@ -90,7 +103,11 @@ function parseSimpleFrontmatter(
       while (i + 1 < lines.length) {
         const nextLine = lines[i + 1];
         // If next line is indented, it's a continuation of the description
-        if (nextLine.match(/^[ \t]+\S/)) {
+        // BUT only if it doesn't look like another key we care about
+        if (
+          nextLine.match(/^[ \t]+\S/) &&
+          !nextLine.match(/^[ \t]*(name|description):/)
+        ) {
           descLines.push(nextLine.trim());
           i++;
         } else {
@@ -98,7 +115,7 @@ function parseSimpleFrontmatter(
         }
       }
 
-      description = descLines.filter(Boolean).join(' ');
+      description = unquote(descLines.filter(Boolean).join(' '));
       continue;
     }
   }
