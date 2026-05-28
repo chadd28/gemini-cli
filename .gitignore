@@ -8,6 +8,7 @@
 # for subcommands.
 **/.gemini/
 !/.gemini/
+!tools/new-issue-bot/.gemini/
 .gemini/*
 !.gemini/config.yaml
 !.gemini/commands/
