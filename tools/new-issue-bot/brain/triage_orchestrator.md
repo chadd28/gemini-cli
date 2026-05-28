@@ -19,8 +19,8 @@ You MUST run the following phases in sequence:
 
 - **Goal:** Search the codebase to locate the files causing the bug.
 - **Action:** Invoke the `diagnoser` agent (defined in your local subagents
-  registry). Pass the issue title and body. The diagnoser is allowed to use
-  `grep_search` and `read_file` to inspect the code. It will return a report
+  registry). Pass the issue title and body. The diagnoser is allowed to use code
+  search and inspection tools to inspect the code. It will return a report
   listing the files and functions related to the bug.
 
 ### Phase 3: Fix Suggestion (Reporter Skill)
