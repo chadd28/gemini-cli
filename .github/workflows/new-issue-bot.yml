@@ -1,82 +1,126 @@
+# name: The label of this workflow as it appears in the Actions tab on the GitHub UI.
 name: '🏷️ Triage & Diagnostic Bot'
 
+# on: Defines the trigger events that start the workflow.
 on:
   issues:
+    # Trigger automatically when a new issue is opened or reopened by any user.
     types:
-      - 'opened'  # Triggers automatically when a new issue is created
+      - 'opened'
+      - 'reopened'
+  # workflow_dispatch: Allows manual triggering of this workflow from the GitHub UI.
   workflow_dispatch:
     inputs:
+      # Custom input parameter so developers can test the bot on specific historical issues.
       issue_number:
         description: 'Issue number to manually trigger on'
         required: false
         type: 'string'
 
+# concurrency: Prevents race conditions. If multiple events fire quickly on the same issue,
+# this groups them by issue number and cancels any in-progress runs to save resources.
 concurrency:
   group: '${{ github.workflow }}-${{ github.event.issue.number || github.event.inputs.issue_number }}'
   cancel-in-progress: true
 
+# permissions: Restricts what operations the automated GITHUB_TOKEN on the runner is allowed to do.
 permissions:
-  contents: 'read'      # Access to read repository files
-  issues: 'write'        # Access to post comments on issues
+  contents: 'read'      # Needed to check out and read repository source code.
+  issues: 'write'        # Needed to post comments and update issue threads.
 
+# jobs: The execution containers. All steps under a job run sequentially on the same VM.
 jobs:
   triage:
     name: 'Triage & Diagnosis'
-    runs-on: 'ubuntu-latest'
-    if: "github.repository == 'chadd28/gemini-cli'" # Safety check: only run on your fork
+    runs-on: 'ubuntu-latest' # Launches a fresh virtual machine pre-installed with Ubuntu Linux.
+    # Safety Check: Ensures the workflow only executes on your fork (to avoid duplicate runs).
+    if: "github.repository == 'chadd28/gemini-cli'"
     steps:
+      # Step 1: Downloads the repository's code onto the runner VM.
+      # uses: runs a pre-made GitHub Action.
       - name: 'Checkout code'
         uses: 'actions/checkout@v5'
         with:
-          persist-credentials: false
+          persist-credentials: false # Disables persisting credentials on the VM for security.
 
+      - name: 'Generate GitHub App Token 🔑'
+        id: 'generate_token'
+        uses: 'actions/create-github-app-token@a8d616148505b5069dccd32f177bb87d7f39123b' # ratchet:actions/create-github-app-token@v2
+        with:
+          app-id: '${{ secrets.APP_ID }}'
+          private-key: '${{ secrets.PRIVATE_KEY }}'
+          owner: '${{ github.repository_owner }}'
+          repositories: '${{ github.event.repository.name }}'
+          permission-issues: 'write'
+
+      # Step 2: Installs Node.js runtime on the runner VM.
       - name: 'Setup Node.js'
         uses: 'actions/setup-node@v4'
         with:
-          node-version: '20'
-          cache: 'npm'
+          node-version: '20' # Installs Node.js version 20.
+          cache: 'npm'       # Caches npm dependencies to speed up future runs.
 
+      # Step 3: Installs package dependencies.
+      # npm ci: Installs dependencies cleanly from package-lock.json (faster and safer than npm install).
       - name: 'Install dependencies'
         run: 'npm ci'
 
+      # Step 4: Compiles and bundles the TypeScript code of Gemini CLI into the bundle/gemini.js file.
       - name: 'Build Gemini CLI'
         run: 'npm run bundle'
 
+      # Step 5: Gathers the issue metadata and combines it with the agent instructions.
       - name: 'Prepare Issue Context'
         id: 'prepare_context'
         env:
-          GH_TOKEN: '${{ secrets.GITHUB_TOKEN }}'
+          GH_TOKEN: '${{ steps.generate_token.outputs.token }}' # Auth token for querying GitHub API via the gh CLI.
+          # Resolves the issue ID (either from the webhook payload or the manual UI input).
           ISSUE_NUMBER: '${{ github.event.issue.number || github.event.inputs.issue_number }}'
         run: |
-          set -euo pipefail
+          set -euo pipefail # Fail immediately if any command in the script fails.
+          
+          # 1. Start the context file. Wrap everything inside <untrusted_context> delimiters
+          # to isolate the user-written issue body and protect the LLM from prompt injection.
           echo "<untrusted_context>" > trigger_context.md
           echo "# New Issue opened by contributor" >> trigger_context.md
           
-          # Fetch the live issue title and body using the gh CLI
+          # 2. Query GitHub using the gh CLI to fetch the issue details and write them to the file.
           gh issue view "$ISSUE_NUMBER" --repo "${{ github.repository }}" >> trigger_context.md
           
+          # 3. Close the security delimiters.
           echo "</untrusted_context>" >> trigger_context.md
           
-          # Combine the context with the triage instructions
+          # 4. Append the master agent prompt instructions to the end of the context file.
+          # The agent now has access to both the target issue text and its instructions in one file.
           cat trigger_context.md tools/new-issue-bot/brain/triage_orchestrator.md > combined_prompt.md
 
+      # Step 6: Invokes the Gemini CLI agent.
       - name: 'Run Triage Agent'
         env:
-          GEMINI_API_KEY: '${{ secrets.GEMINI_API_KEY }}'
-          GITHUB_TOKEN: '${{ secrets.GITHUB_TOKEN }}'
-          GEMINI_MODEL: 'gemini-2.5-flash'
+          GEMINI_API_KEY: '${{ secrets.GEMINI_API_KEY }}' # Secret key to connect to the Gemini API.
+          GITHUB_TOKEN: '${{ steps.generate_token.outputs.token }}'
+          GEMINI_MODEL: 'gemini-2.5-flash'               # The AI model used to process the prompt.
+          # GEMINI_CLI_HOME: Redirects the CLI to look inside tools/new-issue-bot/ for its custom
+          # .gemini/ agents and skills configuration folders instead of the default user directory.
           GEMINI_CLI_HOME: 'tools/new-issue-bot'
+          GEMINI_CLI_TRUST_WORKSPACE: 'true'             # Trust this directory in the automated CI runner.
         run: |
+          # Runs the bundle passing the custom policy file and the combined prompt context.
+          # The agent will execute its reasoning, diagnose, and write its answer to issue-comment.md.
           node bundle/gemini.js --policy tools/new-issue-bot/policy.toml --prompt="$(cat combined_prompt.md)"
 
+      # Step 7: Posts the reply back to the GitHub issue thread.
       - name: 'Post Triage Reply'
         env:
-          GH_TOKEN: '${{ secrets.GITHUB_TOKEN }}'
+          GH_TOKEN: '${{ steps.generate_token.outputs.token }}' # Token with write permissions to post comments.
           ISSUE_NUMBER: '${{ github.event.issue.number || github.event.inputs.issue_number }}'
         run: |
+          # Checks if the agent generated a non-empty response.
           if [ -s "issue-comment.md" ]; then
             echo "Posting diagnosis comment to issue #$ISSUE_NUMBER..."
+            # Uses the GitHub REST API (gh api) to post the comment body text.
             gh api "repos/${{ github.repository }}/issues/$ISSUE_NUMBER/comments" -F body=@"issue-comment.md"
           else
             echo "No comment generated by the agent."
           fi
+
