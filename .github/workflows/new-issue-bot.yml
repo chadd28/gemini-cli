@@ -79,19 +79,10 @@ jobs:
         run: |
           set -euo pipefail # Fail immediately if any command in the script fails.
           
-          # 1. Start the context file. Wrap everything inside <untrusted_context> delimiters
-          # to isolate the user-written issue body and protect the LLM from prompt injection.
           echo "<untrusted_context>" > trigger_context.md
           echo "# New Issue opened by contributor" >> trigger_context.md
-          
-          # 2. Query GitHub using the gh CLI to fetch the issue details and write them to the file.
-          gh issue view "$ISSUE_NUMBER" --repo "${{ github.repository }}" >> trigger_context.md
-          
-          # 3. Close the security delimiters.
+          gh issue view "$ISSUE_NUMBER" --repo "${{ github.repository }}" >> trigger_context.GEMINI_MODEL
           echo "</untrusted_context>" >> trigger_context.md
-          
-          # 4. Append the master agent prompt instructions to the end of the context file.
-          # The agent now has access to both the target issue text and its instructions in one file.
           cat trigger_context.md tools/new-issue-bot/brain/triage_orchestrator.md > combined_prompt.md
 
       # Step 6: Invokes the Gemini CLI agent.
@@ -104,9 +95,9 @@ jobs:
           # .gemini/ agents and skills configuration folders instead of the default user directory.
           GEMINI_CLI_HOME: 'tools/new-issue-bot'
           GEMINI_CLI_TRUST_WORKSPACE: 'true'             # Trust this directory in the automated CI runner.
+        # Runs the bundle passing the custom policy file and the combined prompt context.
+        # The agent will execute its reasoning, diagnose, and write its answer to issue-comment.md.
         run: |
-          # Runs the bundle passing the custom policy file and the combined prompt context.
-          # The agent will execute its reasoning, diagnose, and write its answer to issue-comment.md.
           node bundle/gemini.js --policy tools/new-issue-bot/policy.toml --prompt="$(cat combined_prompt.md)"
 
       # Step 7: Posts the reply back to the GitHub issue thread.
