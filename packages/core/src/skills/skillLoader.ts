@@ -32,7 +32,7 @@ export interface SkillDefinition {
 }
 
 export const FRONTMATTER_REGEX =
-  /^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n([\s\S]*))?/;
+  /^---[ \t]*\r?\n([\s\S]*?)\r?\n---[ \t]*(?:\r?\n([\s\S]*))?/;
 
 /**
  * Parses frontmatter content using YAML with a fallback to simple key-value parsing.
@@ -71,20 +71,36 @@ function parseSimpleFrontmatter(
   let name: string | undefined;
   let description: string | undefined;
 
+  const unquote = (str: string): string => {
+    str = str.trim();
+    if (
+      (str.startsWith('"') && str.endsWith('"')) ||
+      (str.startsWith("'") && str.endsWith("'"))
+    ) {
+      return str.slice(1, -1);
+    }
+    return str;
+  };
+
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
 
     // Match "name:" at the start of the line (optional whitespace)
     const nameMatch = line.match(/^\s*name:\s*(.*)$/);
     if (nameMatch) {
-      name = nameMatch[1].trim();
+      name = unquote(nameMatch[1]);
       continue;
     }
 
     // Match "description:" at the start of the line (optional whitespace)
     const descMatch = line.match(/^\s*description:\s*(.*)$/);
     if (descMatch) {
-      const descLines = [descMatch[1].trim()];
+      const firstLine = descMatch[1].trim();
+      const descLines: string[] = [];
+
+      if (firstLine) {
+        descLines.push(unquote(firstLine));
+      }
 
       // Check for multi-line description (indented continuation lines)
       while (i + 1 < lines.length) {
