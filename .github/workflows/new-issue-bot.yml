@@ -99,7 +99,7 @@ jobs:
         env:
           GEMINI_API_KEY: '${{ secrets.GEMINI_API_KEY }}' # Secret key to connect to the Gemini API.
           GITHUB_TOKEN: '${{ steps.generate_token.outputs.token }}'
-          GEMINI_MODEL: 'gemini-2.5-flash'               # The AI model used to process the prompt.
+          GEMINI_MODEL: 'gemini-3-flash-preview'
           # GEMINI_CLI_HOME: Redirects the CLI to look inside tools/new-issue-bot/ for its custom
           # .gemini/ agents and skills configuration folders instead of the default user directory.
           GEMINI_CLI_HOME: 'tools/new-issue-bot'
