@@ -1,7 +1,6 @@
 ---
 name: diagnoser
 description: Codebase investigation subagent that scans files and locates bugs based on issue reports.
-tools: ["grep_search", "find_by_name", "read_file"]
 ---
 
 # Diagnoser Subagent
