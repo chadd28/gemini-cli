@@ -271,4 +271,87 @@ description: Test sanitization
     expect(skills).toHaveLength(1);
     expect(skills[0].name).toBe('gke-prs-troubleshooter');
   });
+
+  it('should discover skill with trailing whitespace after ---', async () => {
+    const skillDir = path.join(testRootDir, 'trailing-space-skill');
+    await fs.mkdir(skillDir);
+    const skillFile = path.join(skillDir, 'SKILL.md');
+
+    // Trailing space after first and second ---
+    await fs.writeFile(
+      skillFile,
+      `--- \nname: trailing-space-skill\ndescription: Test skill with trailing space\n--- \n# Skill Body\n`,
+    );
+
+    const skills = await loadSkillsFromDir(testRootDir);
+
+    expect(skills).toHaveLength(1);
+    expect(skills[0].name).toBe('trailing-space-skill');
+    expect(skills[0].body).toBe('# Skill Body');
+  });
+
+  it('should discover skill with single-line description containing punctuation', async () => {
+    const skillDir = path.join(testRootDir, 'single-line-desc-skill');
+    await fs.mkdir(skillDir);
+    const skillFile = path.join(skillDir, 'SKILL.md');
+
+    // Single line description with multiple colons
+    await fs.writeFile(
+      skillFile,
+      `---
+name: single-line-desc-skill
+description: A: single line: description with colons.
+---
+# Skill Body
+`,
+    );
+
+    const skills = await loadSkillsFromDir(testRootDir);
+
+    expect(skills).toHaveLength(1);
+    expect(skills[0].name).toBe('single-line-desc-skill');
+    expect(skills[0].description).toBe('A: single line: description with colons.');
+  });
+
+  it('should handle punctuation that breaks YAML but should be handled by fallback', async () => {
+    const skillDir = path.join(testRootDir, 'fallback-skill');
+    await fs.mkdir(skillDir);
+    const skillFile = path.join(skillDir, 'SKILL.md');
+
+    // This should break js-yaml because of the colon followed by space
+    await fs.writeFile(
+      skillFile,
+      `---
+name: fallback-skill
+description: This is a : test
+---
+`,
+    );
+
+    const skills = await loadSkillsFromDir(testRootDir);
+
+    expect(skills).toHaveLength(1);
+    expect(skills[0].description).toBe('This is a : test');
+  });
+
+  it('should handle unquoted colons in name in fallback', async () => {
+    const skillDir = path.join(testRootDir, 'name-fallback-skill');
+    await fs.mkdir(skillDir);
+    const skillFile = path.join(skillDir, 'SKILL.md');
+
+    // This should break js-yaml
+    await fs.writeFile(
+      skillFile,
+      `---
+name: name:with:colons
+description: some description
+---
+`,
+    );
+
+    const skills = await loadSkillsFromDir(testRootDir);
+
+    expect(skills).toHaveLength(1);
+    expect(skills[0].name).toBe('name-with-colons');
+  });
 });
