@@ -31,13 +31,13 @@ on:
 
 jobs:
   build-mac:
-    if: "github.repository == 'google-gemini/gemini-cli'"
+    if: "github.repository == 'chadd28/gemini-cli'"
     uses: './.github/workflows/build-unsigned-mac-binaries.yml'
     with:
       ref: '${{ github.event.inputs.ref }}'
 
   release:
-    if: "github.repository == 'google-gemini/gemini-cli'"
+    if: "github.repository == 'chadd28/gemini-cli'"
     needs: ['build-mac']
     environment: "${{ github.event_name == 'schedule' && 'internal' || github.event.inputs.environment || 'prod' }}"
     runs-on: 'ubuntu-latest'
