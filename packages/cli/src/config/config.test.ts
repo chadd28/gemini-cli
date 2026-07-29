@@ -21,7 +21,7 @@ import {
   type GeminiCLIExtension,
   Storage,
 } from '@google/gemini-cli-core';
-import { loadCliConfig, parseArguments, type CliArgs } from './config.js';
+import { loadCliConfig, parseArguments, isDebugMode, type CliArgs } from './config.js';
 import {
   type Settings,
   type MergedSettings,
@@ -766,6 +766,54 @@ describe('parseArguments', () => {
     process.argv = ['node', 'script.js', 'gemma', 'status'];
     const argv = await parseArguments(createTestMergedSettings());
     expect(argv.isCommand).toBe(true);
+  });
+
+  it('should correctly parse --verbose with a prompt string exceeding 500 characters', async () => {
+    const longPrompt = 'a'.repeat(600);
+    process.argv = [
+      'node',
+      'script.js',
+      '--verbose',
+      longPrompt,
+    ];
+    const argv = await parseArguments(createTestMergedSettings());
+    expect(argv.verbose).toBe(true);
+    expect(argv.query).toBe(longPrompt);
+  });
+
+  it('should return true for isDebugMode when argv.verbose is true', () => {
+    const fakeArgv: CliArgs = {
+      query: undefined,
+      model: undefined,
+      sandbox: undefined,
+      debug: false,
+      verbose: true,
+      prompt: undefined,
+      promptInteractive: undefined,
+      yolo: undefined,
+      approvalMode: undefined,
+      policy: undefined,
+      adminPolicy: undefined,
+      allowedMcpServerNames: undefined,
+      allowedTools: undefined,
+      extensions: undefined,
+      listExtensions: undefined,
+      resume: undefined,
+      sessionId: undefined,
+      listSessions: undefined,
+      deleteSession: undefined,
+      includeDirectories: undefined,
+      screenReader: undefined,
+      useWriteTodos: undefined,
+      outputFormat: undefined,
+      fakeResponses: undefined,
+      recordResponses: undefined,
+      rawOutput: undefined,
+      acceptRawOutputRisk: undefined,
+      skipTrust: undefined,
+      isCommand: undefined,
+    };
+    expect(isDebugMode(fakeArgv)).toBe(true);
   });
 });
 
