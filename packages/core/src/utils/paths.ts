@@ -565,6 +565,9 @@ export function isTrustedSystemPath(filePath: string): boolean {
       // 1P internal hermetic execution paths
       '/google/bin',
       '/google/src/cloud',
+      // Nix environments
+      '/nix/store',
+      '/nix/var/nix/profiles',
     ].map((p) => normalizePath(p));
 
     return trustedPrefixes.some(
