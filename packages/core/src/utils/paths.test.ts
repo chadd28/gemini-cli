@@ -874,6 +874,13 @@ describe('normalizePath', () => {
       expect(isTrustedSystemPath('/Library/rg')).toBe(false);
     });
 
+    it('should allow Nix/devenv paths on POSIX/Linux platforms', () => {
+      mockPlatform('linux');
+
+      expect(isTrustedSystemPath('/nix/store/h176i89xypdwdwibsc18c86v06pk3vdg-ripgrep-13.0.0/bin/rg')).toBe(true);
+      expect(isTrustedSystemPath('/nix/var/nix/profiles/default/bin/rg')).toBe(true);
+    });
+
     it('should allow 1P internal hermetic execution paths', () => {
       mockPlatform('linux');
 
