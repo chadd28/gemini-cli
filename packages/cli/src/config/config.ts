@@ -79,6 +79,7 @@ export interface CliArgs {
   model: string | undefined;
   sandbox: boolean | string | undefined;
   debug: boolean | undefined;
+  verbose: boolean | undefined;
   prompt: string | undefined;
   promptInteractive: string | undefined;
   worktree?: string;
@@ -177,6 +178,11 @@ export async function parseArguments(
       alias: 'd',
       type: 'boolean',
       description: 'Run in debug mode (open debug console with F12)',
+      default: false,
+    })
+    .option('verbose', {
+      type: 'boolean',
+      description: 'Show verbose output',
       default: false,
     })
     .middleware((argv) => {
