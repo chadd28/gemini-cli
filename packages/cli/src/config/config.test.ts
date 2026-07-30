@@ -767,6 +767,13 @@ describe('parseArguments', () => {
     const argv = await parseArguments(createTestMergedSettings());
     expect(argv.isCommand).toBe(true);
   });
+
+  it('should parse --verbose option correctly', async () => {
+    process.argv = ['node', 'script.js', '--verbose', 'prompt'];
+    const argv = await parseArguments(createTestMergedSettings());
+    expect(argv.verbose).toBe(true);
+    expect(argv.query).toBe('prompt');
+  });
 });
 
 describe('loadCliConfig', () => {
