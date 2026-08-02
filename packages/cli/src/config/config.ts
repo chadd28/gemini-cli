@@ -79,6 +79,7 @@ export interface CliArgs {
   model: string | undefined;
   sandbox: boolean | string | undefined;
   debug: boolean | undefined;
+  verbose?: boolean;
   prompt: string | undefined;
   promptInteractive: string | undefined;
   worktree?: string;
@@ -177,6 +178,11 @@ export async function parseArguments(
       alias: 'd',
       type: 'boolean',
       description: 'Run in debug mode (open debug console with F12)',
+      default: false,
+    })
+    .option('verbose', {
+      type: 'boolean',
+      description: 'Run in verbose mode',
       default: false,
     })
     .middleware((argv) => {
@@ -563,6 +569,7 @@ export async function parseArguments(
 export function isDebugMode(argv: CliArgs): boolean {
   return (
     argv.debug ||
+    argv.verbose ||
     [process.env['DEBUG'], process.env['DEBUG_MODE']].some(
       (v) => v === 'true' || v === '1',
     )
