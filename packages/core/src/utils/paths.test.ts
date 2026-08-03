@@ -874,6 +874,18 @@ describe('normalizePath', () => {
       expect(isTrustedSystemPath('/Library/rg')).toBe(false);
     });
 
+    it('should allow Nix/devenv paths under /nix/store on macOS and Linux', () => {
+      mockPlatform('darwin');
+      expect(
+        isTrustedSystemPath('/nix/store/abc123def456-ripgrep-14.1.0/bin/rg'),
+      ).toBe(true);
+
+      mockPlatform('linux');
+      expect(
+        isTrustedSystemPath('/nix/store/abc123def456-ripgrep-14.1.0/bin/rg'),
+      ).toBe(true);
+    });
+
     it('should allow 1P internal hermetic execution paths', () => {
       mockPlatform('linux');
 
