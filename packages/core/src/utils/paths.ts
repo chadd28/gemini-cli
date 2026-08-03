@@ -562,6 +562,7 @@ export function isTrustedSystemPath(filePath: string): boolean {
       '/usr/local/Cellar',
       '/usr/sbin',
       '/sbin',
+      '/nix/store',
       // 1P internal hermetic execution paths
       '/google/bin',
       '/google/src/cloud',
