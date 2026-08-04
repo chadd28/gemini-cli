@@ -554,6 +554,7 @@ export function isTrustedSystemPath(filePath: string): boolean {
     );
   } else {
     const trustedPrefixes = [
+      '/nix/store',
       '/usr/bin',
       '/bin',
       '/usr/local/bin',
