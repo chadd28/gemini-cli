@@ -560,6 +560,7 @@ export function isTrustedSystemPath(filePath: string): boolean {
       '/opt/homebrew/bin',
       '/opt/homebrew/Cellar',
       '/usr/local/Cellar',
+      '/nix/store',
       '/usr/sbin',
       '/sbin',
       // 1P internal hermetic execution paths
