@@ -448,6 +448,34 @@ describe('HookTranslator', () => {
         'Hello response',
       );
     });
+
+    it('should convert hook response back to SDK format with usageMetadata containing token counts', () => {
+      const hookResponse: LLMResponse = {
+        text: 'Hello response',
+        candidates: [
+          {
+            content: {
+              role: 'model',
+              parts: ['Hello response'],
+            },
+            finishReason: 'STOP',
+          },
+        ],
+        usageMetadata: {
+          promptTokenCount: 15,
+          candidatesTokenCount: 25,
+          totalTokenCount: 40,
+        },
+      };
+
+      const sdkResponse = translator.fromHookLLMResponse(hookResponse);
+
+      expect(sdkResponse.usageMetadata).toEqual({
+        promptTokenCount: 15,
+        candidatesTokenCount: 25,
+        totalTokenCount: 40,
+      });
+    });
   });
 
   describe('Tool Config Translation', () => {
