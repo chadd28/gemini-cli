@@ -438,6 +438,11 @@ describe('HookTranslator', () => {
             finishReason: 'STOP',
           },
         ],
+        usageMetadata: {
+          promptTokenCount: 15,
+          candidatesTokenCount: 25,
+          totalTokenCount: 40,
+        },
       };
 
       const sdkResponse = translator.fromHookLLMResponse(hookResponse);
@@ -447,6 +452,11 @@ describe('HookTranslator', () => {
       expect(sdkResponse.candidates?.[0]?.content?.parts?.[0]?.text).toBe(
         'Hello response',
       );
+      expect(sdkResponse.usageMetadata).toEqual({
+        promptTokenCount: 15,
+        candidatesTokenCount: 25,
+        totalTokenCount: 40,
+      });
     });
   });
 
