@@ -865,6 +865,9 @@ describe('normalizePath', () => {
       expect(
         isTrustedSystemPath('/usr/local/Cellar/ripgrep/13.0.0/bin/rg'),
       ).toBe(true);
+      expect(
+        isTrustedSystemPath('/nix/store/abc123def456-ripgrep-14.1.0/bin/rg'),
+      ).toBe(true);
       expect(isTrustedSystemPath('/usr/sbin/rg')).toBe(true);
       expect(isTrustedSystemPath('/sbin/rg')).toBe(true);
 
