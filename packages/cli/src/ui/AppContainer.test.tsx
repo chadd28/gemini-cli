@@ -96,7 +96,7 @@ vi.mock('@google/gemini-cli-core', async (importOriginal) => {
   };
 });
 import ansiEscapes from 'ansi-escapes';
-import { type LoadedSettings } from '../config/settings.js';
+import { type LoadedSettings, SettingScope } from '../config/settings.js';
 import { createMockSettings } from '../test-utils/settings.js';
 import type { InitializationResult } from '../core/initializer.js';
 import { useQuotaAndFallback } from './hooks/useQuotaAndFallback.js';
@@ -3707,4 +3707,65 @@ describe('AppContainer State Management', () => {
       unmount();
     });
   });
+
+  describe('IDE Integration Nudge Prompt', () => {
+    let mockHandleSlashCommand: Mock;
+
+    beforeEach(() => {
+      mockHandleSlashCommand = vi.fn();
+      mockedUseSlashCommandProcessor.mockReturnValue({
+        handleSlashCommand: mockHandleSlashCommand,
+        slashCommands: [],
+        pendingHistoryItems: [],
+        commandContext: {},
+        shellConfirmationRequest: null,
+        confirmationRequest: null,
+      });
+    });
+
+    it('should run "/ide enable" when isExtensionPreInstalled is true and selection is "yes"', async () => {
+      const setValueSpy = vi.spyOn(mockSettings, 'setValue').mockImplementation(() => {});
+      const { unmount } = await act(async () => renderAppContainer());
+
+      expect(capturedUIActions).toBeTruthy();
+
+      await act(async () => {
+        capturedUIActions.handleIdePromptComplete({
+          userSelection: 'yes',
+          isExtensionPreInstalled: true,
+        });
+      });
+
+      expect(mockHandleSlashCommand).toHaveBeenCalledWith('/ide enable');
+      expect(setValueSpy).toHaveBeenCalledWith(
+        SettingScope.User,
+        'ide.hasSeenNudge',
+        true,
+      );
+      unmount();
+    });
+
+    it('should run "/ide install" when isExtensionPreInstalled is false and selection is "yes"', async () => {
+      const setValueSpy = vi.spyOn(mockSettings, 'setValue').mockImplementation(() => {});
+      const { unmount } = await act(async () => renderAppContainer());
+
+      expect(capturedUIActions).toBeTruthy();
+
+      await act(async () => {
+        capturedUIActions.handleIdePromptComplete({
+          userSelection: 'yes',
+          isExtensionPreInstalled: false,
+        });
+      });
+
+      expect(mockHandleSlashCommand).toHaveBeenCalledWith('/ide install');
+      expect(setValueSpy).toHaveBeenCalledWith(
+        SettingScope.User,
+        'ide.hasSeenNudge',
+        true,
+      );
+      unmount();
+    });
+  });
 });
+
