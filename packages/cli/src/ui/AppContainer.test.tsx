@@ -39,6 +39,7 @@ const mockCoreEvents = vi.hoisted(() => ({
   off: vi.fn(),
   drainBacklogs: vi.fn(),
   emit: vi.fn(),
+  emitFeedback: vi.fn(),
 }));
 
 // Mock IdeClient
@@ -3704,6 +3705,54 @@ describe('AppContainer State Management', () => {
       // Verify it was NOT queued
       expect(capturedUIState.messageQueue).not.toContain('/help');
 
+      unmount();
+    });
+  });
+
+  describe('IDE Integration Nudge Prompt', () => {
+    let mockHandleSlashCommand: Mock;
+
+    beforeEach(() => {
+      mockHandleSlashCommand = vi.fn();
+      mockedUseSlashCommandProcessor.mockReturnValue({
+        handleSlashCommand: mockHandleSlashCommand,
+        slashCommands: [],
+        pendingHistoryItems: [],
+        commandContext: {},
+        shellConfirmationRequest: null,
+        confirmationRequest: null,
+      });
+    });
+
+    it('executes /ide enable when accepted and the extension is pre-installed', async () => {
+      const settingsMock = createMockSettings();
+      settingsMock.setValue = vi.fn();
+      const { unmount } = await act(async () => renderAppContainer({ settings: settingsMock }));
+
+      await act(async () => {
+        capturedUIActions.handleIdePromptComplete({
+          userSelection: 'yes',
+          isExtensionPreInstalled: true,
+        });
+      });
+
+      expect(mockHandleSlashCommand).toHaveBeenCalledWith('/ide enable');
+      unmount();
+    });
+
+    it('executes /ide install when accepted and the extension is NOT pre-installed', async () => {
+      const settingsMock = createMockSettings();
+      settingsMock.setValue = vi.fn();
+      const { unmount } = await act(async () => renderAppContainer({ settings: settingsMock }));
+
+      await act(async () => {
+        capturedUIActions.handleIdePromptComplete({
+          userSelection: 'yes',
+          isExtensionPreInstalled: false,
+        });
+      });
+
+      expect(mockHandleSlashCommand).toHaveBeenCalledWith('/ide install');
       unmount();
     });
   });
