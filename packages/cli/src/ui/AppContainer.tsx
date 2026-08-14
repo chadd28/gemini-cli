@@ -1774,7 +1774,9 @@ Logging in with Google... Restarting Gemini CLI to continue.
     (result: IdeIntegrationNudgeResult) => {
       if (result.userSelection === 'yes') {
         // eslint-disable-next-line @typescript-eslint/no-floating-promises
-        handleSlashCommand('/ide install');
+        handleSlashCommand(
+          result.isExtensionPreInstalled ? '/ide enable' : '/ide install',
+        );
         settings.setValue(SettingScope.User, 'ide.hasSeenNudge', true);
       } else if (result.userSelection === 'dismiss') {
         settings.setValue(SettingScope.User, 'ide.hasSeenNudge', true);
