@@ -189,4 +189,36 @@ describe('IdeIntegrationNudge', () => {
     });
     unmount();
   });
+
+  it('sets isExtensionPreInstalled to true in onComplete value for dismiss selection when preinstalled envs are set', async () => {
+    vi.stubEnv('GEMINI_CLI_IDE_SERVER_PORT', '1234');
+    vi.stubEnv('GEMINI_CLI_IDE_WORKSPACE_PATH', '/tmp');
+
+    const onComplete = vi.fn();
+    const { stdin, waitUntilReady, unmount } = await renderWithProviders(
+      <IdeIntegrationNudge {...defaultProps} onComplete={onComplete} />,
+    );
+
+    // Navigate to "No, don't ask again"
+    await act(async () => {
+      stdin.write('\u001B[B'); // Down arrow
+    });
+    await waitUntilReady();
+
+    await act(async () => {
+      stdin.write('\u001B[B'); // Down arrow
+    });
+    await waitUntilReady();
+
+    await act(async () => {
+      stdin.write('\r'); // Enter
+    });
+    await waitUntilReady();
+
+    expect(onComplete).toHaveBeenCalledWith({
+      userSelection: 'dismiss',
+      isExtensionPreInstalled: true,
+    });
+    unmount();
+  });
 });
