@@ -7,7 +7,7 @@
 import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
 import { renderWithProviders } from '../test-utils/render.js';
 import { act } from 'react';
-import { IdeIntegrationNudge } from './IdeIntegrationNudge.js';
+import { IdeIntegrationNudge, type IdeIntegrationNudgeResult } from './IdeIntegrationNudge.js';
 import { debugLogger } from '@google/gemini-cli-core';
 
 // Mock debugLogger
@@ -187,6 +187,62 @@ describe('IdeIntegrationNudge', () => {
       userSelection: 'yes',
       isExtensionPreInstalled: true,
     });
+    unmount();
+  });
+
+  it('triggers /ide enable instead of /ide install when extension is pre-installed', async () => {
+    vi.stubEnv('GEMINI_CLI_IDE_SERVER_PORT', '1234');
+    vi.stubEnv('GEMINI_CLI_IDE_WORKSPACE_PATH', '/tmp');
+
+    const handleSlashCommand = vi.fn();
+    const handleIdePromptComplete = (result: IdeIntegrationNudgeResult) => {
+      if (result.userSelection === 'yes') {
+        handleSlashCommand(
+          result.isExtensionPreInstalled ? '/ide enable' : '/ide install',
+        );
+      }
+    };
+
+    const { stdin, waitUntilReady, unmount } = await renderWithProviders(
+      <IdeIntegrationNudge {...defaultProps} onComplete={handleIdePromptComplete} />,
+    );
+
+    // Select "Yes"
+    await act(async () => {
+      stdin.write('\r');
+    });
+    await waitUntilReady();
+
+    expect(handleSlashCommand).toHaveBeenCalledWith('/ide enable');
+    expect(handleSlashCommand).not.toHaveBeenCalledWith('/ide install');
+    unmount();
+  });
+
+  it('triggers /ide install when extension is not pre-installed', async () => {
+    vi.stubEnv('GEMINI_CLI_IDE_SERVER_PORT', '');
+    vi.stubEnv('GEMINI_CLI_IDE_WORKSPACE_PATH', '');
+
+    const handleSlashCommand = vi.fn();
+    const handleIdePromptComplete = (result: IdeIntegrationNudgeResult) => {
+      if (result.userSelection === 'yes') {
+        handleSlashCommand(
+          result.isExtensionPreInstalled ? '/ide enable' : '/ide install',
+        );
+      }
+    };
+
+    const { stdin, waitUntilReady, unmount } = await renderWithProviders(
+      <IdeIntegrationNudge {...defaultProps} onComplete={handleIdePromptComplete} />,
+    );
+
+    // Select "Yes"
+    await act(async () => {
+      stdin.write('\r');
+    });
+    await waitUntilReady();
+
+    expect(handleSlashCommand).toHaveBeenCalledWith('/ide install');
+    expect(handleSlashCommand).not.toHaveBeenCalledWith('/ide enable');
     unmount();
   });
 });
