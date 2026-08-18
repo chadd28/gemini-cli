@@ -39,6 +39,8 @@ const mockCoreEvents = vi.hoisted(() => ({
   off: vi.fn(),
   drainBacklogs: vi.fn(),
   emit: vi.fn(),
+  emitFeedback: vi.fn(),
+  emitSettingsChanged: vi.fn(),
 }));
 
 // Mock IdeClient
@@ -3707,4 +3709,49 @@ describe('AppContainer State Management', () => {
       unmount();
     });
   });
+
+  describe('IDE Companion Integration Nudge', () => {
+    let mockHandleSlashCommand: Mock;
+
+    beforeEach(() => {
+      mockHandleSlashCommand = vi.fn();
+      mockedUseSlashCommandProcessor.mockReturnValue({
+        handleSlashCommand: mockHandleSlashCommand,
+        slashCommands: [],
+        pendingHistoryItems: [],
+        commandContext: {},
+        shellConfirmationRequest: null,
+        confirmationRequest: null,
+      });
+    });
+
+    it('executes "/ide enable" when companion extension is pre-installed', async () => {
+      const { unmount } = await act(async () => renderAppContainer());
+
+      act(() => {
+        capturedUIActions.handleIdePromptComplete({
+          userSelection: 'yes',
+          isExtensionPreInstalled: true,
+        });
+      });
+
+      expect(mockHandleSlashCommand).toHaveBeenCalledWith('/ide enable');
+      unmount();
+    });
+
+    it('executes "/ide install" when companion extension is not pre-installed', async () => {
+      const { unmount } = await act(async () => renderAppContainer());
+
+      act(() => {
+        capturedUIActions.handleIdePromptComplete({
+          userSelection: 'yes',
+          isExtensionPreInstalled: false,
+        });
+      });
+
+      expect(mockHandleSlashCommand).toHaveBeenCalledWith('/ide install');
+      unmount();
+    });
+  });
 });
+
